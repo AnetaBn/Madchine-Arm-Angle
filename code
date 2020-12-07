@@ -1,0 +1,680 @@
+classdef app10 < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                 matlab.ui.Figure
+        l1SpinnerLabel           matlab.ui.control.Label
+        l1_u                     matlab.ui.control.Spinner
+        new_data_button          matlab.ui.control.Button
+        wymiary_label            matlab.ui.control.Label
+        wsp_p_label              matlab.ui.control.Label
+        przejcie_label           matlab.ui.control.Label
+        l2SpinnerLabel           matlab.ui.control.Label
+        l2_u                     matlab.ui.control.Spinner
+        l3SpinnerLabel           matlab.ui.control.Label
+        l3_u                     matlab.ui.control.Spinner
+        dSpinnerLabel            matlab.ui.control.Label
+        d_u                      matlab.ui.control.Spinner
+        eSpinnerLabel            matlab.ui.control.Label
+        e_u                      matlab.ui.control.Spinner
+        x1SpinnerLabel           matlab.ui.control.Label
+        x1_u                     matlab.ui.control.Spinner
+        y1SpinnerLabel           matlab.ui.control.Label
+        y1_u                     matlab.ui.control.Spinner
+        z1SpinnerLabel           matlab.ui.control.Label
+        z1_u                     matlab.ui.control.Spinner
+        wsp_k_label              matlab.ui.control.Label
+        y2SpinnerLabel           matlab.ui.control.Label
+        y2_u                     matlab.ui.control.Spinner
+        x2Spinner_3Label         matlab.ui.control.Label
+        x2_u                     matlab.ui.control.Spinner
+        z2SpinnerLabel           matlab.ui.control.Label
+        z2_u                     matlab.ui.control.Spinner
+        delta2SpinnerLabel       matlab.ui.control.Label
+        delta2_u                 matlab.ui.control.Spinner
+        liczbakrokwSpinnerLabel  matlab.ui.control.Label
+        liczba_k_u               matlab.ui.control.Spinner
+        delta1SpinnerLabel       matlab.ui.control.Label
+        delta1_u                 matlab.ui.control.Spinner
+        fi_label                 matlab.ui.control.Label
+        fi2SpinnerLabel          matlab.ui.control.Label
+        fi2_r                    matlab.ui.control.Spinner
+        fi1SpinnerLabel          matlab.ui.control.Label
+        fi1_r                    matlab.ui.control.Spinner
+        fi3SpinnerLabel          matlab.ui.control.Label
+        fi3_r                    matlab.ui.control.Spinner
+        draw_button              matlab.ui.control.Button
+        TextArea                 matlab.ui.control.TextArea
+        fi23Label                matlab.ui.control.Label
+        fi23_r                   matlab.ui.control.Spinner
+        sidev_plot               matlab.ui.control.UIAxes
+        plot_3D                  matlab.ui.control.UIAxes
+        topv_plot                matlab.ui.control.UIAxes
+    end
+
+    
+    properties (Access = private)
+        S1
+        S2
+        S3
+        C1
+        C2
+        C3
+        S23
+        C23  
+        fi1
+        fi2
+        fi3
+        fi23
+        X
+        Y
+        Z
+        l1
+        l2
+        l3
+        d
+        e
+        a
+        b
+        liczba_k
+        flaga
+        tab_rot 
+        k
+        x
+        y
+        z
+    end
+    
+    methods (Access = private)
+   
+        function obliczenia_glowne(app)
+            app.liczba_k = app.liczba_k_u.Value;
+            deltaX = (app.x2_u.Value - app.x1_u.Value)/app.liczba_k;
+            deltaY = (app.y2_u.Value - app.y1_u.Value)/app.liczba_k;
+            deltaZ = (app.z2_u.Value - app.z1_u.Value)/app.liczba_k;
+            app.X = zeros(app.liczba_k, 6);
+            app.Y = zeros(app.liczba_k, 6);
+            app.Z = zeros(app.liczba_k, 6);
+                            
+            for i=0:(app.liczba_k-1) 
+                if(app.flaga==0)
+                    return
+                end
+                app.k = i;
+                app.tab_rot = [(app.x1_u.Value + i*deltaX) (app.y1_u.Value + i*deltaY) (app.z1_u.Value + i*deltaZ)];
+                obiczenia(app)
+            end
+        end
+     
+        function obiczenia(app)
+            if app.flaga == 1 || app.flaga == 2
+                if app.tab_rot(1)^2 + app.tab_rot(2)^2 < (app.e_u.Value)^(2) %literówka
+                    blad(app)
+                    return
+                end
+            end
+            
+           %S1 C1 Fi1
+            app.S1 = 1/(app.tab_rot(1)^2 + app.tab_rot(2)^2)*(app.e_u.Value*app.tab_rot(1) + app.delta1_u.Value*app.tab_rot(2)*(app.tab_rot(1)^2+app.tab_rot(2)^2 - app.e_u.Value^2)^(1/2));
+            if abs(app.S1)>1
+                blad(app)
+                return
+            end
+            
+            app.C1 = 1/(app.tab_rot(1)^2 + app.tab_rot(2)^2)*(-app.e_u.Value*app.tab_rot(2) + app.delta1_u.Value*app.tab_rot(1)*(app.tab_rot(1)^2+app.tab_rot(2)^2 - app.e_u.Value^2)^(1/2));
+            if abs(app.C1)>1
+                blad(app)
+                return
+            end
+            
+            app.fi1 = obliczFi(app, app.S1, app.C1);
+            
+            %a, b
+            app.a = -app.l1_u.Value + app.delta1_u.Value*(app.tab_rot(1)^2 + app.tab_rot(2)^2 - app.e_u.Value^2)^(1/2);
+            app.b = (1/(2*app.l2_u.Value))*(app.a^2 + (app.tab_rot(3))^2 + (app.l2_u.Value)^2 - (app.l3_u.Value)^2);
+            if (app.a^2 + app.tab_rot(2)^2 - app.b^2) < 0
+                blad(app)
+                return
+            end
+            
+            %S2 C2 Fi2
+            app.S2 = 1/(app.a^2 + app.tab_rot(3)^2)*(app.b*app.tab_rot(3)+app.delta2_u.Value*app.a*((app.a)^2 + (app.tab_rot(3))^2 - (app.b)^2)^(1/2));
+            if abs(app.S2)>1
+                blad(app)
+                return
+            end
+            
+            app.C2 = 1/(app.a^2 + app.tab_rot(3)^2)*(app.a*app.b - app.tab_rot(3)*app.delta2_u.Value*((app.a)^2 + (app.tab_rot(3))^2 - (app.b)^2)^(1/2));
+            if abs(app.C2)>1
+                blad(app)
+                return
+            end
+            
+            app.fi2 = obliczFi(app, app.S2, app.C2);
+           %S3 C3 Fi3
+           app.S3 = -(app.delta2_u.Value/app.l3_u.Value)*((app.a)^2+ (app.tab_rot(3))^2 - (app.b)^2)^(1/2);
+           if abs(app.S3) > 1
+               blad(app)
+               return
+           end
+           
+           app.C3 = 1/(2*app.l3_u.Value*app.l2_u.Value)*((app.a)^2 + (app.tab_rot(3))^2 - (app.l3_u.Value)^2 - (app.l2_u.Value)^2);
+           if abs(app.C3) > 1
+               blad(app)
+               return
+           end
+           
+           app.fi3 = obliczFi(app, app.S3, app.C3);
+           
+            %S23 C23 Fi23
+           app.S23 = 1/app.l3_u.Value*(app.tab_rot(3) - app.l2_u.Value/((app.a)^2 + app.tab_rot(3)^2)*(app.tab_rot(3)*(app.b) + app.delta2_u.Value*(app.a)*((app.a)^2 + (app.tab_rot(3))^2 - (app.b)^2)^(1/2)));
+            if abs(app.S23) > 1
+                blad(app)
+                return
+            end
+            
+            app.C23 = 1/app.l3_u.Value*(app.a - app.l2_u.Value/(app.a^2 + app.tab_rot(3)^2)*(app.a*app.b - app.tab_rot(3)*app.delta2_u.Value*((app.a)^2 + (app.tab_rot(3))^2 - (app.b)^2)^(1/2)));
+            if abs(app.C23) > 1
+                blad(app)
+                return
+            end
+            
+            
+            app.fi23 = obliczFi(app, app.S23, app.C23);
+            pokazFi(app)
+            przypisz_nowe(app)
+            
+            if app.flaga ==1
+                wykres_1(app);
+                pause(0.4);
+            end
+            
+            if app.flaga ==2
+                wykres_2(app);
+                pause(0.4);
+            end
+            
+        end
+        
+        function Fi = obliczFi(app,S,C)
+            if(abs(S)<abs(C))
+                Fi  = asin(S)*180/pi;
+            else
+                Fi = acos(C)*180/pi;
+            end
+        end
+        
+        function pokazFi(app)
+            app.fi1_r.Value = app.fi1;
+            app.fi1_r.Enable = 'on';
+            app.fi2_r.Value = app.fi2;
+            app.fi2_r.Enable = 'on';
+            app.fi3_r.Value = app.fi3;
+            app.fi3_r.Enable = 'on';
+            app.fi23_r.Value = app.fi23;
+            app.fi23_r.Enable = 'on';
+        end
+
+        
+        function przypisz_nowe(app)
+            %do zmiany
+            app.l1 = app.l1_u.Value; 
+            app.l2 = app.l2_u.Value;
+            app.l3 = app.l3_u.Value;
+            app.e = app.e_u.Value;
+            app.d = app.d_u.Value;
+            
+            macierz = zeros(3,6);
+            macierz(:,2) = (app.l1*[app.C1;app.S1;0]);
+            macierz(:,3) = (macierz(:,2) + (app.d.*[app.S1; -app.C1; 0]));
+            macierz(:,4) = (macierz(:,3) + (app.l2.*[app.C1*app.C2; app.S1*app.C2; app.S2]));
+            macierz(:,5) = (macierz(:,4) + ((app.d-app.e).*[-app.S1; app.C1; 0]));
+            macierz(:,6) = (macierz(:,5) + (app.l3.*[app.C23*app.C1; app.C23*app.S1; app.S23]));
+            
+            app.X = macierz(1,:);
+            app.Y = macierz(2,:);
+            app.Z = macierz(3,:);
+        end
+        
+        function blad(app)
+            uialert(uifigure,'Wprowadzone dane nie zapewniają bezpiecznego przejscia, wprowadz ponownie dane','Błędne dane','Icon','error');
+            cla(app.topv_plot);
+            cla(app.sidev_plot);
+            cla(app.plot_3D);
+            app.flaga = 0;
+        end
+        
+        function wykres_1(app)
+            plot(app.topv_plot, app.X, app.Z)
+            grid (app.topv_plot, 'on');
+            hold (app.topv_plot,'on');
+            plot(app.sidev_plot, app.X, app.Y)
+            grid (app.sidev_plot, 'on');
+            hold (app.sidev_plot,'on');   
+        end
+      
+        function wykres_2(app)
+            plot3(app.plot_3D, app.X, app.Y, app.Z);
+            grid (app.plot_3D, 'on');
+            hold (app.plot_3D,'on');
+        end 
+    end
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: draw_button
+        function draw_buttonPushed(app, event)
+            cla(app.plot_3D);
+            app.plot_3D.Visible = 'on';
+            app.flaga = 2;
+            obliczenia_glowne(app)
+        end
+
+        % Button pushed function: new_data_button
+        function new_data_buttonPushed(app, event)
+            cla(app.topv_plot);
+            cla(app.sidev_plot);
+            app.flaga=1;
+            obliczenia_glowne(app)
+        end
+
+        % Close request function: UIFigure
+        function UIFigureCloseRequest(app, event)
+            delete(app)
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Color = [0.8627 0.8824 0.902];
+            app.UIFigure.Position = [100 100 1231 741];
+            app.UIFigure.Name = 'MATLAB App';
+            app.UIFigure.CloseRequestFcn = createCallbackFcn(app, @UIFigureCloseRequest, true);
+
+            % Create l1SpinnerLabel
+            app.l1SpinnerLabel = uilabel(app.UIFigure);
+            app.l1SpinnerLabel.HorizontalAlignment = 'right';
+            app.l1SpinnerLabel.FontWeight = 'bold';
+            app.l1SpinnerLabel.Position = [51 610 25 23];
+            app.l1SpinnerLabel.Text = 'l1';
+
+            % Create l1_u
+            app.l1_u = uispinner(app.UIFigure);
+            app.l1_u.FontWeight = 'bold';
+            app.l1_u.Position = [91 611 111 22];
+            app.l1_u.Value = 30;
+
+            % Create new_data_button
+            app.new_data_button = uibutton(app.UIFigure, 'push');
+            app.new_data_button.ButtonPushedFcn = createCallbackFcn(app, @new_data_buttonPushed, true);
+            app.new_data_button.BackgroundColor = [0 0 0];
+            app.new_data_button.FontWeight = 'bold';
+            app.new_data_button.FontColor = [1 1 1];
+            app.new_data_button.Position = [1043 596 162 52];
+            app.new_data_button.Text = 'Wykres 2D';
+
+            % Create wymiary_label
+            app.wymiary_label = uilabel(app.UIFigure);
+            app.wymiary_label.FontName = 'Times New Roman';
+            app.wymiary_label.FontSize = 16;
+            app.wymiary_label.Position = [66 643 84 22];
+            app.wymiary_label.Text = 'WYMIARY';
+
+            % Create wsp_p_label
+            app.wsp_p_label = uilabel(app.UIFigure);
+            app.wsp_p_label.FontName = 'Times New Roman';
+            app.wsp_p_label.FontSize = 16;
+            app.wsp_p_label.Position = [279 639 254 30];
+            app.wsp_p_label.Text = 'WSPÓŁRZĘDNE POCZĄTKOWE';
+
+            % Create przejcie_label
+            app.przejcie_label = uilabel(app.UIFigure);
+            app.przejcie_label.FontName = 'Times New Roman';
+            app.przejcie_label.FontSize = 16;
+            app.przejcie_label.Position = [818 642 103 24];
+            app.przejcie_label.Text = 'PRZEJŚCIE';
+
+            % Create l2SpinnerLabel
+            app.l2SpinnerLabel = uilabel(app.UIFigure);
+            app.l2SpinnerLabel.HorizontalAlignment = 'right';
+            app.l2SpinnerLabel.FontWeight = 'bold';
+            app.l2SpinnerLabel.Position = [51 587 25 23];
+            app.l2SpinnerLabel.Text = 'l2';
+
+            % Create l2_u
+            app.l2_u = uispinner(app.UIFigure);
+            app.l2_u.FontWeight = 'bold';
+            app.l2_u.Position = [91 588 111 22];
+            app.l2_u.Value = 80;
+
+            % Create l3SpinnerLabel
+            app.l3SpinnerLabel = uilabel(app.UIFigure);
+            app.l3SpinnerLabel.HorizontalAlignment = 'right';
+            app.l3SpinnerLabel.FontWeight = 'bold';
+            app.l3SpinnerLabel.Position = [51 565 25 23];
+            app.l3SpinnerLabel.Text = 'l3';
+
+            % Create l3_u
+            app.l3_u = uispinner(app.UIFigure);
+            app.l3_u.FontWeight = 'bold';
+            app.l3_u.Position = [91 566 111 22];
+            app.l3_u.Value = 90;
+
+            % Create dSpinnerLabel
+            app.dSpinnerLabel = uilabel(app.UIFigure);
+            app.dSpinnerLabel.HorizontalAlignment = 'right';
+            app.dSpinnerLabel.FontWeight = 'bold';
+            app.dSpinnerLabel.Position = [51 543 25 23];
+            app.dSpinnerLabel.Text = 'd';
+
+            % Create d_u
+            app.d_u = uispinner(app.UIFigure);
+            app.d_u.FontWeight = 'bold';
+            app.d_u.Position = [91 544 111 22];
+            app.d_u.Value = 15;
+
+            % Create eSpinnerLabel
+            app.eSpinnerLabel = uilabel(app.UIFigure);
+            app.eSpinnerLabel.HorizontalAlignment = 'right';
+            app.eSpinnerLabel.FontWeight = 'bold';
+            app.eSpinnerLabel.Position = [51 521 25 23];
+            app.eSpinnerLabel.Text = 'e';
+
+            % Create e_u
+            app.e_u = uispinner(app.UIFigure);
+            app.e_u.FontWeight = 'bold';
+            app.e_u.Position = [91 522 111 22];
+            app.e_u.Value = 15;
+
+            % Create x1SpinnerLabel
+            app.x1SpinnerLabel = uilabel(app.UIFigure);
+            app.x1SpinnerLabel.HorizontalAlignment = 'right';
+            app.x1SpinnerLabel.FontWeight = 'bold';
+            app.x1SpinnerLabel.Position = [279 601 25 23];
+            app.x1SpinnerLabel.Text = 'x1';
+
+            % Create x1_u
+            app.x1_u = uispinner(app.UIFigure);
+            app.x1_u.FontWeight = 'bold';
+            app.x1_u.Position = [317 602 111 22];
+            app.x1_u.Value = 70;
+
+            % Create y1SpinnerLabel
+            app.y1SpinnerLabel = uilabel(app.UIFigure);
+            app.y1SpinnerLabel.HorizontalAlignment = 'right';
+            app.y1SpinnerLabel.FontWeight = 'bold';
+            app.y1SpinnerLabel.Position = [278 578 25 23];
+            app.y1SpinnerLabel.Text = 'y1';
+
+            % Create y1_u
+            app.y1_u = uispinner(app.UIFigure);
+            app.y1_u.FontWeight = 'bold';
+            app.y1_u.Position = [317 579 111 22];
+            app.y1_u.Value = 40;
+
+            % Create z1SpinnerLabel
+            app.z1SpinnerLabel = uilabel(app.UIFigure);
+            app.z1SpinnerLabel.HorizontalAlignment = 'right';
+            app.z1SpinnerLabel.FontWeight = 'bold';
+            app.z1SpinnerLabel.Position = [277 554 25 23];
+            app.z1SpinnerLabel.Text = 'z1';
+
+            % Create z1_u
+            app.z1_u = uispinner(app.UIFigure);
+            app.z1_u.FontWeight = 'bold';
+            app.z1_u.Position = [317 555 111 22];
+            app.z1_u.Value = 50;
+
+            % Create wsp_k_label
+            app.wsp_k_label = uilabel(app.UIFigure);
+            app.wsp_k_label.FontName = 'Times New Roman';
+            app.wsp_k_label.FontSize = 16;
+            app.wsp_k_label.Position = [558 639 222 30];
+            app.wsp_k_label.Text = 'WSPÓŁRZĘDNE KOŃCOWE';
+
+            % Create y2SpinnerLabel
+            app.y2SpinnerLabel = uilabel(app.UIFigure);
+            app.y2SpinnerLabel.HorizontalAlignment = 'right';
+            app.y2SpinnerLabel.FontWeight = 'bold';
+            app.y2SpinnerLabel.Position = [558 578 25 23];
+            app.y2SpinnerLabel.Text = 'y2';
+
+            % Create y2_u
+            app.y2_u = uispinner(app.UIFigure);
+            app.y2_u.FontWeight = 'bold';
+            app.y2_u.Position = [598 579 111 22];
+            app.y2_u.Value = 80;
+
+            % Create x2Spinner_3Label
+            app.x2Spinner_3Label = uilabel(app.UIFigure);
+            app.x2Spinner_3Label.HorizontalAlignment = 'right';
+            app.x2Spinner_3Label.FontWeight = 'bold';
+            app.x2Spinner_3Label.Position = [558 601 25 23];
+            app.x2Spinner_3Label.Text = 'x2';
+
+            % Create x2_u
+            app.x2_u = uispinner(app.UIFigure);
+            app.x2_u.FontWeight = 'bold';
+            app.x2_u.Position = [598 602 111 22];
+            app.x2_u.Value = 40;
+
+            % Create z2SpinnerLabel
+            app.z2SpinnerLabel = uilabel(app.UIFigure);
+            app.z2SpinnerLabel.HorizontalAlignment = 'right';
+            app.z2SpinnerLabel.FontWeight = 'bold';
+            app.z2SpinnerLabel.Position = [558 552 25 23];
+            app.z2SpinnerLabel.Text = 'z2';
+
+            % Create z2_u
+            app.z2_u = uispinner(app.UIFigure);
+            app.z2_u.FontWeight = 'bold';
+            app.z2_u.Position = [598 553 111 22];
+            app.z2_u.Value = 10;
+
+            % Create delta2SpinnerLabel
+            app.delta2SpinnerLabel = uilabel(app.UIFigure);
+            app.delta2SpinnerLabel.HorizontalAlignment = 'right';
+            app.delta2SpinnerLabel.FontWeight = 'bold';
+            app.delta2SpinnerLabel.Position = [820 553 40 23];
+            app.delta2SpinnerLabel.Text = 'delta2';
+
+            % Create delta2_u
+            app.delta2_u = uispinner(app.UIFigure);
+            app.delta2_u.Step = 2;
+            app.delta2_u.Limits = [-1 1];
+            app.delta2_u.FontWeight = 'bold';
+            app.delta2_u.Position = [875 554 111 22];
+            app.delta2_u.Value = -1;
+
+            % Create liczbakrokwSpinnerLabel
+            app.liczbakrokwSpinnerLabel = uilabel(app.UIFigure);
+            app.liczbakrokwSpinnerLabel.HorizontalAlignment = 'right';
+            app.liczbakrokwSpinnerLabel.FontWeight = 'bold';
+            app.liczbakrokwSpinnerLabel.Position = [820 604 84 23];
+            app.liczbakrokwSpinnerLabel.Text = 'liczba kroków';
+
+            % Create liczba_k_u
+            app.liczba_k_u = uispinner(app.UIFigure);
+            app.liczba_k_u.FontWeight = 'bold';
+            app.liczba_k_u.Position = [919 605 111 22];
+            app.liczba_k_u.Value = 10;
+
+            % Create delta1SpinnerLabel
+            app.delta1SpinnerLabel = uilabel(app.UIFigure);
+            app.delta1SpinnerLabel.HorizontalAlignment = 'right';
+            app.delta1SpinnerLabel.FontWeight = 'bold';
+            app.delta1SpinnerLabel.Position = [820 579 40 23];
+            app.delta1SpinnerLabel.Text = 'delta1';
+
+            % Create delta1_u
+            app.delta1_u = uispinner(app.UIFigure);
+            app.delta1_u.Step = 2;
+            app.delta1_u.Limits = [-1 1];
+            app.delta1_u.FontWeight = 'bold';
+            app.delta1_u.Position = [875 580 111 22];
+            app.delta1_u.Value = 1;
+
+            % Create fi_label
+            app.fi_label = uilabel(app.UIFigure);
+            app.fi_label.FontName = 'Times New Roman';
+            app.fi_label.FontSize = 18;
+            app.fi_label.FontWeight = 'bold';
+            app.fi_label.Position = [742 457 323 41];
+            app.fi_label.Text = 'WARTOŚCI WYNIKOWYCH KĄTÓW';
+
+            % Create fi2SpinnerLabel
+            app.fi2SpinnerLabel = uilabel(app.UIFigure);
+            app.fi2SpinnerLabel.HorizontalAlignment = 'right';
+            app.fi2SpinnerLabel.FontName = 'Times New Roman';
+            app.fi2SpinnerLabel.FontSize = 16;
+            app.fi2SpinnerLabel.FontWeight = 'bold';
+            app.fi2SpinnerLabel.Position = [694 378 25 23];
+            app.fi2SpinnerLabel.Text = 'fi2';
+
+            % Create fi2_r
+            app.fi2_r = uispinner(app.UIFigure);
+            app.fi2_r.Editable = 'off';
+            app.fi2_r.FontName = 'Times New Roman';
+            app.fi2_r.FontSize = 16;
+            app.fi2_r.FontWeight = 'bold';
+            app.fi2_r.Enable = 'off';
+            app.fi2_r.Position = [734 379 111 22];
+
+            % Create fi1SpinnerLabel
+            app.fi1SpinnerLabel = uilabel(app.UIFigure);
+            app.fi1SpinnerLabel.HorizontalAlignment = 'right';
+            app.fi1SpinnerLabel.FontName = 'Times New Roman';
+            app.fi1SpinnerLabel.FontSize = 16;
+            app.fi1SpinnerLabel.FontWeight = 'bold';
+            app.fi1SpinnerLabel.Position = [694 418 25 23];
+            app.fi1SpinnerLabel.Text = 'fi1';
+
+            % Create fi1_r
+            app.fi1_r = uispinner(app.UIFigure);
+            app.fi1_r.Editable = 'off';
+            app.fi1_r.FontName = 'Times New Roman';
+            app.fi1_r.FontSize = 16;
+            app.fi1_r.FontWeight = 'bold';
+            app.fi1_r.Enable = 'off';
+            app.fi1_r.Position = [734 419 111 22];
+
+            % Create fi3SpinnerLabel
+            app.fi3SpinnerLabel = uilabel(app.UIFigure);
+            app.fi3SpinnerLabel.HorizontalAlignment = 'right';
+            app.fi3SpinnerLabel.FontName = 'Times New Roman';
+            app.fi3SpinnerLabel.FontSize = 16;
+            app.fi3SpinnerLabel.FontWeight = 'bold';
+            app.fi3SpinnerLabel.Position = [933 418 25 23];
+            app.fi3SpinnerLabel.Text = 'fi3';
+
+            % Create fi3_r
+            app.fi3_r = uispinner(app.UIFigure);
+            app.fi3_r.Editable = 'off';
+            app.fi3_r.FontName = 'Times New Roman';
+            app.fi3_r.FontSize = 16;
+            app.fi3_r.FontWeight = 'bold';
+            app.fi3_r.Enable = 'off';
+            app.fi3_r.Position = [973 419 111 22];
+
+            % Create draw_button
+            app.draw_button = uibutton(app.UIFigure, 'push');
+            app.draw_button.ButtonPushedFcn = createCallbackFcn(app, @draw_buttonPushed, true);
+            app.draw_button.BackgroundColor = [0 0 0];
+            app.draw_button.FontWeight = 'bold';
+            app.draw_button.FontColor = [1 1 1];
+            app.draw_button.Position = [1043 533 162 56];
+            app.draw_button.Text = 'Wykres 3D';
+
+            % Create TextArea
+            app.TextArea = uitextarea(app.UIFigure);
+            app.TextArea.HorizontalAlignment = 'center';
+            app.TextArea.FontName = 'Times New Roman';
+            app.TextArea.FontSize = 20;
+            app.TextArea.FontWeight = 'bold';
+            app.TextArea.BackgroundColor = [0.9137 0.9333 0.9412];
+            app.TextArea.Position = [368 679 508 49];
+            app.TextArea.Value = {'WIZUALIZACJA RUCHU PUNKTU TCP '; 'MECHANIZMU O STRUKTURZE {CR, BR1, BR2} '};
+
+            % Create fi23Label
+            app.fi23Label = uilabel(app.UIFigure);
+            app.fi23Label.HorizontalAlignment = 'right';
+            app.fi23Label.FontName = 'Times New Roman';
+            app.fi23Label.FontSize = 16;
+            app.fi23Label.FontWeight = 'bold';
+            app.fi23Label.Position = [927 378 31 23];
+            app.fi23Label.Text = 'fi23';
+
+            % Create fi23_r
+            app.fi23_r = uispinner(app.UIFigure);
+            app.fi23_r.Editable = 'off';
+            app.fi23_r.FontName = 'Times New Roman';
+            app.fi23_r.FontSize = 16;
+            app.fi23_r.FontWeight = 'bold';
+            app.fi23_r.Enable = 'off';
+            app.fi23_r.Position = [973 379 111 22];
+
+            % Create sidev_plot
+            app.sidev_plot = uiaxes(app.UIFigure);
+            title(app.sidev_plot, 'Rzut z boku')
+            xlabel(app.sidev_plot, 'X')
+            ylabel(app.sidev_plot, 'Y')
+            app.sidev_plot.PlotBoxAspectRatio = [1.95283018867925 1 1];
+            app.sidev_plot.FontName = 'Times New Roman';
+            app.sidev_plot.FontSize = 16;
+            app.sidev_plot.Position = [75 265 413 250];
+
+            % Create plot_3D
+            app.plot_3D = uiaxes(app.UIFigure);
+            title(app.plot_3D, '3D')
+            xlabel(app.plot_3D, 'X')
+            ylabel(app.plot_3D, 'Y')
+            app.plot_3D.FontName = 'Times New Roman';
+            app.plot_3D.FontSize = 16;
+            app.plot_3D.Position = [635 12 499 348];
+
+            % Create topv_plot
+            app.topv_plot = uiaxes(app.UIFigure);
+            title(app.topv_plot, 'Rzut z góry')
+            xlabel(app.topv_plot, 'X')
+            ylabel(app.topv_plot, 'Z')
+            app.topv_plot.FontName = 'Times New Roman';
+            app.topv_plot.FontSize = 16;
+            app.topv_plot.Position = [75 12 413 242];
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = app10
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end
