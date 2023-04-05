@@ -1,4 +1,4 @@
-classdef app10 < matlab.apps.AppBase
+classdef appArmAngle < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -657,7 +657,7 @@ classdef app10 < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = app10
+        function app = appArmAngle
 
             % Create UIFigure and components
             createComponents(app)
